@@ -1,0 +1,94 @@
+name: Version Demo
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version_suffix:
+        description: 'Optional version suffix (e.g., alpha, beta, rc1)'
+        required: false
+        default: ''
+      use_calver:
+        description: 'Use Calendar Versioning'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  demonstrate-version-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # Basic usage - SemVer
+      - name: Generate SemVer version
+        id: semver
+        uses: ./.github/actions/version-generator
+        with:
+          use-calver: false
+          add-meta: true
+      
+      # With suffix - SemVer
+      - name: Generate SemVer version with suffix
+        id: semver-suffix
+        uses: ./.github/actions/version-generator
+        with:
+          use-calver: false
+          version-suffix: ${{ github.event.inputs.version_suffix || 'beta' }}
+          add-meta: true
+      
+      # CalVer usage
+      - name: Generate CalVer version
+        id: calver
+        uses: ./.github/actions/version-generator
+        with:
+          use-calver: ${{ github.event.inputs.use_calver || 'true' }}
+          add-meta: true
+      
+      # Branch-specific configuration
+      - name: Generate branch-specific version
+        id: branch-version
+        uses: ./.github/actions/version-generator
+        with:
+          use-calver: ${{ github.ref == 'refs/heads/develop' && 'true' || 'false' }}
+          version-suffix: ${{ github.ref == 'refs/heads/develop' && 'dev' || '' }}
+          add-meta: ${{ github.ref != 'refs/heads/main' }}
+      
+      # Custom JIRA prefix
+      - name: Generate version with custom JIRA prefix
+        id: custom-jira
+        uses: ./.github/actions/version-generator
+        with:
+          jira-prefix: "ABC"
+          add-meta: true
+      
+      # Display all generated versions
+      - name: Display versions
+        run: |
+          echo "SemVer: ${{ steps.semver.outputs.version }}"
+          echo "SemVer with suffix: ${{ steps.semver-suffix.outputs.version }}"
+          echo "CalVer: ${{ steps.calver.outputs.version }}"
+          echo "Branch-specific: ${{ steps.branch-version.outputs.version }}"
+          echo "Custom JIRA prefix: ${{ steps.custom-jira.outputs.version }}"
+      
+      # Example of using the version in a build process
+      - name: Example build step
+        run: |
+          echo "Building application version ${{ steps.branch-version.outputs.version }}"
+          # Your build commands would go here
+      
+      # Example of creating a release (only on main branch)
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Creating release v${{ steps.branch-version.outputs.version }}"
+          # In a real workflow, you might use actions/create-release or similar
