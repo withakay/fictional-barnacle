@@ -61,9 +61,13 @@ extract_pr_metadata() {
 
   if [ -n "$pr_title" ] && [ "$pr_title" != "null" ]; then
     # Extract JIRA ticket from anywhere in PR title
-    local jira_ticket=$(echo "$pr_title" | grep -oE "($jira_prefix-[0-9]+|$jira_prefix[0-9]+)" | head -n 1)
+    # Support prefixes with spaces (e.g., "MK 123" or "MK-123")
+    local jira_ticket=$(echo "$pr_title" | grep -oE "($jira_prefix[- ][0-9]+|$jira_prefix[0-9]+)" | head -n 1)
     if [ -n "$jira_ticket" ]; then
-      [[ $jira_ticket != *-* ]] && jira_ticket="$jira_prefix-${jira_ticket#$jira_prefix}"
+      # Normalize the JIRA ticket format to use a hyphen
+      [[ $jira_ticket != *-* ]] && jira_ticket=$(echo "$jira_ticket" | sed -E "s/($jira_prefix)[ ]?([0-9]+)/\1-\2/")
+      # Convert to lowercase
+      jira_ticket=$(echo "$jira_ticket" | tr '[:upper:]' '[:lower:]')
       metadata="$jira_ticket-$metadata"
     fi
 
@@ -77,6 +81,8 @@ extract_pr_metadata() {
     fi
   fi
 
+  # Ensure all metadata is lowercase
+  metadata=$(echo "$metadata" | tr '[:upper:]' '[:lower:]')
   echo "$metadata"
 }
 
