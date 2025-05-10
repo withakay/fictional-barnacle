@@ -178,8 +178,9 @@ generate_next_version() {
 
   # Add metadata if requested
   if [ "$add_meta" = "true" ]; then
-    local meta="$short_sha"
-    [ -n "$run_number" ] && meta="$meta.$run_number"
+    local meta=""
+    [ -n "$run_number" ] && meta="$run_number-"
+    meta="${meta}$short_sha"
 
     # Extract PR info
     local pr_metadata=""
