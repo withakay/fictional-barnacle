@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       # Basic usage - SemVer
       - name: Generate SemVer version
         id: semver
@@ -36,7 +36,7 @@ jobs:
         with:
           use-calver: false
           add-meta: true
-      
+
       # With suffix - SemVer
       - name: Generate SemVer version with suffix
         id: semver-suffix
@@ -45,7 +45,7 @@ jobs:
           use-calver: false
           version-suffix: ${{ github.event.inputs.version_suffix || 'beta' }}
           add-meta: true
-      
+
       # CalVer usage
       - name: Generate CalVer version
         id: calver
@@ -53,7 +53,7 @@ jobs:
         with:
           use-calver: ${{ github.event.inputs.use_calver || 'true' }}
           add-meta: true
-      
+
       # Branch-specific configuration
       - name: Generate branch-specific version
         id: branch-version
@@ -62,7 +62,7 @@ jobs:
           use-calver: ${{ github.ref == 'refs/heads/develop' && 'true' || 'false' }}
           version-suffix: ${{ github.ref == 'refs/heads/develop' && 'dev' || '' }}
           add-meta: ${{ github.ref != 'refs/heads/main' }}
-      
+
       # Custom JIRA prefix
       - name: Generate version with custom JIRA prefix
         id: custom-jira
@@ -70,22 +70,22 @@ jobs:
         with:
           jira-prefix: "ABC"
           add-meta: true
-      
+
       # Display all generated versions
       - name: Display versions
         run: |
-          echo "SemVer: ${{ steps.semver.outputs.version }}"
-          echo "SemVer with suffix: ${{ steps.semver-suffix.outputs.version }}"
-          echo "CalVer: ${{ steps.calver.outputs.version }}"
-          echo "Branch-specific: ${{ steps.branch-version.outputs.version }}"
-          echo "Custom JIRA prefix: ${{ steps.custom-jira.outputs.version }}"
-      
+          echo "- SemVer: ${{ steps.semver.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SemVer with suffix: ${{ steps.semver-suffix.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- CalVer: ${{ steps.calver.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch-specific: ${{ steps.branch-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Custom JIRA prefix: ${{ steps.custom-jira.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
       # Example of using the version in a build process
       - name: Example build step
         run: |
           echo "Building application version ${{ steps.branch-version.outputs.version }}"
           # Your build commands would go here
-      
+
       # Example of creating a release (only on main branch)
       - name: Create Release
         if: github.ref == 'refs/heads/main'
