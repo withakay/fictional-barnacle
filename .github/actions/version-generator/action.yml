@@ -1,0 +1,74 @@
+name: "Generate next version"
+description: "Calculates the next version based on commit messages, PR titles, and existing tags with support for CalVer and SemVer."
+inputs:
+  version-number:
+    required: false
+    type: string
+    default: ""
+    description: "If the version has been created once already in the same repo for another app"
+  version-suffix:
+    required: false
+    type: string
+    default: ""
+    description: "Optional suffix to add after version number but before metadata (e.g., alpha, beta, rc1)"
+  add-meta:
+    required: false
+    type: string
+    default: "false"
+    description: "Whether to add metadata to the version (true/false)"
+  jira-prefix:
+    required: false
+    type: string
+    default: "MK"
+    description: "JIRA project prefix (e.g., MK, FX, AB)"
+  alternate-pr-prefixes:
+    required: false
+    type: string
+    default: "fix,hotfix,chore,feat,refactor,docs,style,ci"
+    description: "Comma-separated list of alternate PR title prefixes to recognize (e.g., fix,feat,chore)"
+  use-calver:
+    required: false
+    type: string
+    default: "false"
+    description: "Use Calendar Versioning (YYMM.Minor.Patch) instead of Semantic Versioning (Major.Minor.Patch)"
+  semver-major:
+    required: false
+    type: string
+    default: "1"
+    description: "Initial major version for SemVer mode (only used if use-calver is false and no tags exist)"
+outputs:
+  version:
+    description: "The new version number calculated based on commit messages, PR titles, and existing tags."
+    value: ${{ steps.version.outputs.version }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Make script executable
+      shell: bash
+      run: chmod +x ${{ github.action_path }}/generate-version.sh
+
+    - name: Generate next version
+      id: version
+      shell: bash
+      run: |
+        # Call the external script with all inputs
+        version=$(${{ github.action_path }}/generate-version.sh \
+          "${{ inputs.version-number }}" \
+          "${{ inputs.version-suffix }}" \
+          "${{ inputs.add-meta }}" \
+          "${{ inputs.jira-prefix }}" \
+          "${{ inputs.alternate-pr-prefixes }}" \
+          "${{ inputs.use-calver }}" \
+          "${{ inputs.semver-major }}" \
+          "$GITHUB_REF" \
+          "$GITHUB_SHA" \
+          "$GITHUB_RUN_NUMBER" \
+          "$GITHUB_EVENT_PATH" \
+        )
+
+        echo "New version: $version"
+        echo "version=$version" >> $GITHUB_OUTPUT
