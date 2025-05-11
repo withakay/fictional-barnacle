@@ -25,27 +25,52 @@ calculate_next_version() {
   local IFS='.'
   read -r major minor patch <<< "${current_version//[!0-9.]/}"
 
+  # Determine version bump type based on commit messages
+  local bump_type="patch" # Default to patch bump
+
+  # Check for breaking changes (highest priority)
+  if [[ "$commit_messages" == *"BREAKING CHANGE"* ]]; then
+    bump_type="major"
+  # Check for feature commits (second priority)
+  elif [[ "$commit_messages" == *"feat"* ]] || \
+       [[ "$commit_messages" == *"refactor"* ]] || \
+       [[ "$commit_messages" == *"docs"* ]] || \
+       [[ "$commit_messages" == *"chore"* ]] || \
+       [[ "$commit_messages" == *"style"* ]] || \
+       [[ "$commit_messages" == *"ci"* ]]; then
+    bump_type="minor"
+  fi
+
+  # Handle CalVer special case - new month
+  if [ "$use_calver" = "true" ] && [ "$major" != "$current_major" ]; then
+    echo "$current_major.0.1"
+    return
+  fi
+
+  # Apply version bump based on bump_type and versioning scheme
   if [ "$use_calver" = "true" ]; then
     # CalVer logic
-    if [ "$major" != "$current_major" ]; then
-      echo "$current_major.0.1"
-      return
-    fi
-
-    if echo "$commit_messages" | grep -Eq "^(feat|refactor|docs|chore|style|ci)\([a-zA-Z0-9_-]+\):"; then
-      echo "$major.$((minor + 1)).0"
-    else
-      echo "$major.$minor.$((patch + 1))"
-    fi
+    case "$bump_type" in
+      major|minor)
+        echo "$major.$((minor + 1)).0"
+        ;;
+      patch)
+        echo "$major.$minor.$((patch + 1))"
+        ;;
+    esac
   else
     # SemVer logic
-    if echo "$commit_messages" | grep -Eq "^(BREAKING\sCHANGE)\([a-zA-Z0-9_-]+\):"; then
-      echo "$((major + 1)).0.0"
-    elif echo "$commit_messages" | grep -Eq "^(feat|refactor|docs|chore|style|ci)\([a-zA-Z0-9_-]+\):"; then
-      echo "$major.$((minor + 1)).0"
-    else
-      echo "$major.$minor.$((patch + 1))"
-    fi
+    case "$bump_type" in
+      major)
+        echo "$((major + 1)).0.0"
+        ;;
+      minor)
+        echo "$major.$((minor + 1)).0"
+        ;;
+      patch)
+        echo "$major.$minor.$((patch + 1))"
+        ;;
+    esac
   fi
 }
 
@@ -61,11 +86,13 @@ extract_pr_metadata() {
 
   if [ -n "$pr_title" ] && [ "$pr_title" != "null" ]; then
     # Extract JIRA ticket from anywhere in PR title
+    # Support multiple JIRA prefixes separated by commas
+    local jira_prefixes=$(echo "$jira_prefix" | tr ',' '|')
     # Support prefixes with spaces (e.g., "MK 123" or "MK-123")
-    local jira_ticket=$(echo "$pr_title" | grep -oE "($jira_prefix[- ][0-9]+|$jira_prefix[0-9]+)" | head -n 1)
+    local jira_ticket=$(echo "$pr_title" | grep -oE "(${jira_prefixes})[- ]?[0-9]+" | head -n 1)
     if [ -n "$jira_ticket" ]; then
       # Normalize the JIRA ticket format to remove hyphens and spaces
-      jira_ticket=$(echo "$jira_ticket" | sed -E "s/($jira_prefix)[- ]?([0-9]+)/\1\2/")
+      jira_ticket=$(echo "$jira_ticket" | sed -E "s/([A-Za-z]+)[- ]?([0-9]+)/\1\2/")
       # Convert to lowercase
       jira_ticket=$(echo "$jira_ticket" | tr '[:upper:]' '[:lower:]')
       metadata="$jira_ticket-$metadata"

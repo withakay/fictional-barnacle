@@ -25,27 +25,29 @@ The basic format is `Major.Minor.Patch[-Suffix][-Metadata]` where:
 
 - **Minor & Patch**: Incremented based on conventional commit types in commit messages
 - **Suffix (Optional)**: Custom suffix like 'alpha', 'beta', 'rc1'
-- **Metadata (Optional)**: Auto-generated information for development builds
+- **Metadata (Optional)**: Auto-generated information for development builds in the format `[jira/prefix]-pr[number].[run_number]-[commit_hash]`
 
 ## Examples
 
 - `2505.0.1` - Basic CalVer (May 2025)
 - `2505.0.1-beta` - CalVer with suffix
-- `2505.0.1-beta-MK-123-fix-pr456-abc123` - CalVer with suffix and metadata
+- `2505.0.1-beta-mk123-pr456.42-abc123` - CalVer with suffix and metadata
 - `1.2.3` - Basic SemVer
 - `1.2.3-rc1` - SemVer with suffix
-- `1.2.3-rc1-MK-123-fix-pr456-abc123` - SemVer with suffix and metadata
+- `1.2.3-rc1-mk123-pr456.42-abc123` - SemVer with suffix and metadata
 
 ## Increment Logic
 
 The action analyzes commit messages since the last tag to determine what to increment:
 
 **For SemVer:**
+
 - `BREAKING CHANGE(scope):` → Bump major version
 - `feat(scope):`, `refactor(scope):`, etc. → Bump minor version
 - `fix(scope):`, `hotfix(scope):` → Bump patch version
 
 **For CalVer:**
+
 - New month/year → Reset to YYMM.0.1
 - Same month/year:
   - `feat(scope):`, `refactor(scope):`, etc. → Bump minor version
@@ -174,7 +176,7 @@ The test suite covers:
 - Version increments based on commit types
 - Version suffix addition
 - Metadata extraction from PR titles
-- JIRA ticket extraction and normalization
+- JIRA ticket extraction and normalization (removing hyphens and spaces)
 - Conventional commit prefix extraction
 - Branch-specific versioning
 - Direct version overrides
@@ -191,12 +193,36 @@ run_test "Test name" "expected_result" "version_number" "version_suffix" "add_me
 ## Implementation Details
 
 This action uses a modular approach with separate functions for:
+
 - Creating initial versions
 - Calculating version increments based on commit messages
 - Applying version suffixes
 - Extracting metadata from PR titles
 
+### Metadata Format
+
+When `add-meta` is enabled, the action adds metadata in this format:
+
+`[jira/prefix]-pr[number].[run_number]-[commit_hash]`
+
+Where:
+- **jira/prefix**: Normalized JIRA ticket (e.g., `mk123` from `MK-123` or `MK 123`) or commit prefix (e.g., `fix`, `feat`)
+- **pr[number]**: Pull request number (e.g., `pr456`)
+- **run_number**: GitHub workflow run number (e.g., `42`)
+- **commit_hash**: Short commit hash (e.g., `abc123`)
+
+#### JIRA Ticket Normalization
+
+JIRA tickets are normalized by:
+1. Converting to lowercase
+2. Removing hyphens and spaces between prefix and number
+
+Examples:
+- `MK-123` → `mk123`
+- `ABC 456` → `abc456`
+
 The core functionality is extracted to a standalone script (`generate-version.sh`), making it:
+
 - Independently testable
 - Easier to maintain
 - More reusable across different contexts

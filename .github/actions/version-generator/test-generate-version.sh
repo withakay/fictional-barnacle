@@ -196,7 +196,7 @@ run_tests() {
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
   run_test "JIRA prefix with space" "1.0.1-abc789-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
-  # Test 19: JIRA prefix with space
+  # Test 19: JIRA prefix with space (2)
   export PR_TITLE="Implement ABC 9XX login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
@@ -216,6 +216,78 @@ run_tests() {
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
   run_test "JIRA prefix with partial match is not used (2)" "1.0.1-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 22: CalVer with suffix and metadata
+  export PR_TITLE="feat: ABC-123 New feature"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="$current_major.0.1"
+  MOCK_COMMITS_VALUE="feat(api): Add new feature"
+  run_test "CalVer with suffix and metadata" "$current_major.1.0-beta-abc123-pr123.42-1234567" "" "beta" "true" "ABC" "fix,hotfix,chore,feat" "true" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 23: PR title with multiple JIRA tickets (should use first)
+  export PR_TITLE="ABC-123 Fix issue described in XYZ-456"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "Multiple JIRA tickets in PR title" "1.0.1-abc123-pr123.42-1234567" "" "" "true" "ABC,XYZ" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 24: Empty PR title
+  export PR_TITLE=""
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "Empty PR title" "1.0.1-pr123.42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 25: Multiple commit types (should use highest priority - major > minor > patch)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue\nfeat(ui): Add new feature\nBREAKING CHANGE(api): Change API structure"
+  run_test "Multiple commit types (major wins)" "2.0.0" "" "" "false" "MK" "fix,hotfix,chore,feat" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42"
+
+  # Test 26: Multiple commit types (minor wins)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue\nfeat(ui): Add new feature\nchore: Update dependencies"
+  run_test "Multiple commit types (minor wins)" "1.1.0" "" "" "false" "MK" "fix,hotfix,chore,feat" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42"
+
+  # Test 27: Version suffix on non-main branch
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "Version suffix on non-main branch" "1.0.1-alpha-feature-1234567" "" "alpha" "false" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/feature" "1234567890abcdef1234567890abcdef12345678" "42"
+
+  # Test 28: CalVer with multiple commit types
+  MOCK_LATEST_TAG_VALUE="$current_major.0.1"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue\nfeat(ui): Add new feature"
+  run_test "CalVer with multiple commit types" "$current_major.1.0" "" "" "false" "MK" "fix,hotfix,chore,feat" "true" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42"
+
+  # Test 29: JIRA prefix with no space
+  export PR_TITLE="Implement ABC99 login feature"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "JIRA prefix with no space" "1.0.1-abc99-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 30: JIRA prefix with no space (2)
+  export PR_TITLE="Implement ABC99-XZY login feature"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "JIRA prefix with no space (2)" "1.0.1-abc99-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 31: JIRA prefix with no space (3)
+  export PR_TITLE="Implement ABC99:XZY login feature"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "JIRA prefix with no space (2)" "1.0.1-abc99-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+
+  # Test 30: JIRA prefix with no space (4)
+  export PR_TITLE="Implement ABC99|XZY login feature"
+  event_file=$(setup_pr_test)
+  MOCK_LATEST_TAG_VALUE="1.0.0"
+  MOCK_COMMITS_VALUE="fix(api): Fix login issue"
+  run_test "JIRA prefix with no space (4)" "1.0.1-abc99-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test summary
   echo ""

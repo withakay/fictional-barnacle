@@ -1,41 +1,56 @@
 name: "Generate next version"
-description: "Calculates the next version based on commit messages, PR titles, and existing tags with support for CalVer and SemVer."
+description: |
+  Calculates the next version based on commit messages, PR titles, and existing tags with support for CalVer and SemVer.
+  Can bump Major, Minor, or Patch based on commit messages and PR titles using conventional commit style semantics.
+  See the README for more details.
 inputs:
-  version-number:
-    required: false
-    type: string
-    default: ""
-    description: "If the version has been created once already in the same repo for another app"
-  version-suffix:
-    required: false
-    type: string
-    default: ""
-    description: "Optional suffix to add after version number but before metadata (e.g., alpha, beta, rc1)"
-  add-meta:
-    required: false
-    type: string
-    default: "false"
-    description: "Whether to add metadata to the version (true/false)"
-  jira-prefix:
-    required: false
-    type: string
-    default: "MK"
-    description: "JIRA project prefix (e.g., MK, FX, AB)"
-  alternate-pr-prefixes:
-    required: false
-    type: string
-    default: "fix,hotfix,chore,feat,refactor,docs,style,ci"
-    description: "Comma-separated list of alternate PR title prefixes to recognize (e.g., fix,feat,chore)"
   use-calver:
     required: false
     type: string
     default: "false"
-    description: "Use Calendar Versioning (YYMM.Minor.Patch) instead of Semantic Versioning (Major.Minor.Patch)"
+    description: |
+      Use Calendar Versioning (YYMM.Minor.Patch) instead of Semantic Versioning (Major.Minor.Patch).
   semver-major:
     required: false
     type: string
-    default: "1"
-    description: "Initial major version for SemVer mode (only used if use-calver is false and no tags exist)"
+    default: "0"
+    description: |
+      Initial major version for SemVer mode (only used if use-calver is false and no version tags already exist).
+  add-meta:
+    required: false
+    type: string
+    default: "false"
+    description: |
+      Whether to add metadata to the version (true/false).
+      Typically used for PR based development releases.
+      Metadata includes PR number, run number, commit hash, and JIRA ticket.
+  version-suffix:
+    required: false
+    type: string
+    default: ""
+    description: |
+      Optional suffix to add after version number but before other metadata.
+      Requires add-meta to be true to take effect.
+      Commonly used for pre-release versions (e.g., alpha, beta, rc1, etc.)
+      For example, if the suffix is "alpha" and the PR number is 123, the version will start with "v1.0.1-alpha-pr123"
+  jira-prefix:
+    required: false
+    type: string
+    default: ""
+    description: |
+      Optional JIRA project prefix (e.g., MK, FX, AB).
+      Used to extract JIRA ticket from PR title.
+      Requires add-meta to be true to take effect.
+      For example, if the prefix is FX, the ticket will be extracted from a PR title like "FX-123: Fix bug"
+      and added to the version metadata as "fx123", e.g., "v1.0.1-fx123-pr123.1-hash123"
+  alternate-pr-prefixes:
+    required: false
+    type: string
+    default: "fix,hotfix,chore,feat,refactor,docs,style,ci"
+    description: |
+      Optional comma-separated list of alternate PR title prefixes to recognize.
+      Requires add-meta to be true to take effect.
+      Defaults to conventional commit style prefixes e.g., fix,feat,chore
 outputs:
   version:
     description: "The new version number calculated based on commit messages, PR titles, and existing tags."
