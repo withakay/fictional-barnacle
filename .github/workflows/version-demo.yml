@@ -69,7 +69,7 @@ jobs:
         uses: ./.github/actions/version-generator
         with:
           jira-prefix: "ABC"
-          pr-suffix: "pre"
+          version-suffix: "pre"
           add-meta: true
 
       # Display all generated versions
