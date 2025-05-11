@@ -25,27 +25,52 @@ calculate_next_version() {
   local IFS='.'
   read -r major minor patch <<< "${current_version//[!0-9.]/}"
 
+  # Determine version bump type based on commit messages
+  local bump_type="patch" # Default to patch bump
+
+  # Check for breaking changes (highest priority)
+  if [[ "$commit_messages" == *"BREAKING CHANGE"* ]]; then
+    bump_type="major"
+  # Check for feature commits (second priority)
+  elif [[ "$commit_messages" == *"feat"* ]] || \
+       [[ "$commit_messages" == *"refactor"* ]] || \
+       [[ "$commit_messages" == *"docs"* ]] || \
+       [[ "$commit_messages" == *"chore"* ]] || \
+       [[ "$commit_messages" == *"style"* ]] || \
+       [[ "$commit_messages" == *"ci"* ]]; then
+    bump_type="minor"
+  fi
+
+  # Handle CalVer special case - new month
+  if [ "$use_calver" = "true" ] && [ "$major" != "$current_major" ]; then
+    echo "$current_major.0.1"
+    return
+  fi
+
+  # Apply version bump based on bump_type and versioning scheme
   if [ "$use_calver" = "true" ]; then
     # CalVer logic
-    if [ "$major" != "$current_major" ]; then
-      echo "$current_major.0.1"
-      return
-    fi
-
-    if echo "$commit_messages" | grep -Eq "^(feat|refactor|docs|chore|style|ci)\([a-zA-Z0-9_-]+\):"; then
-      echo "$major.$((minor + 1)).0"
-    else
-      echo "$major.$minor.$((patch + 1))"
-    fi
+    case "$bump_type" in
+      major|minor)
+        echo "$major.$((minor + 1)).0"
+        ;;
+      patch)
+        echo "$major.$minor.$((patch + 1))"
+        ;;
+    esac
   else
     # SemVer logic
-    if echo "$commit_messages" | grep -Eq "^(BREAKING\sCHANGE)\([a-zA-Z0-9_-]+\):"; then
-      echo "$((major + 1)).0.0"
-    elif echo "$commit_messages" | grep -Eq "^(feat|refactor|docs|chore|style|ci)\([a-zA-Z0-9_-]+\):"; then
-      echo "$major.$((minor + 1)).0"
-    else
-      echo "$major.$minor.$((patch + 1))"
-    fi
+    case "$bump_type" in
+      major)
+        echo "$((major + 1)).0.0"
+        ;;
+      minor)
+        echo "$major.$((minor + 1)).0"
+        ;;
+      patch)
+        echo "$major.$minor.$((patch + 1))"
+        ;;
+    esac
   fi
 }
 
@@ -61,9 +86,15 @@ extract_pr_metadata() {
 
   if [ -n "$pr_title" ] && [ "$pr_title" != "null" ]; then
     # Extract JIRA ticket from anywhere in PR title
-    local jira_ticket=$(echo "$pr_title" | grep -oE "($jira_prefix-[0-9]+|$jira_prefix[0-9]+)" | head -n 1)
+    # Support multiple JIRA prefixes separated by commas
+    local jira_prefixes=$(echo "$jira_prefix" | tr ',' '|')
+    # Support prefixes with spaces (e.g., "MK 123" or "MK-123")
+    local jira_ticket=$(echo "$pr_title" | grep -oE "(${jira_prefixes})[- ]?[0-9]+" | head -n 1)
     if [ -n "$jira_ticket" ]; then
-      [[ $jira_ticket != *-* ]] && jira_ticket="$jira_prefix-${jira_ticket#$jira_prefix}"
+      # Normalize the JIRA ticket format to remove hyphens and spaces
+      jira_ticket=$(echo "$jira_ticket" | sed -E "s/([A-Za-z]+)[- ]?([0-9]+)/\1\2/")
+      # Convert to lowercase
+      jira_ticket=$(echo "$jira_ticket" | tr '[:upper:]' '[:lower:]')
       metadata="$jira_ticket-$metadata"
     fi
 
@@ -77,6 +108,8 @@ extract_pr_metadata() {
     fi
   fi
 
+  # Ensure all metadata is lowercase
+  metadata=$(echo "$metadata" | tr '[:upper:]' '[:lower:]')
   echo "$metadata"
 }
 
@@ -172,20 +205,62 @@ generate_next_version() {
 
   # Add metadata if requested
   if [ "$add_meta" = "true" ]; then
-    local meta="$short_sha"
-    [ -n "$run_number" ] && meta="$meta.$run_number"
-
     # Extract PR info
-    local pr_metadata=""
+    local prefix_metadata=""
+    local pr_number_part=""
+    local run_number_part=""
+    
     if [ -n "$github_event_path" ] && [ -f "$github_event_path" ]; then
       local pr_number=$(jq --raw-output '.pull_request.number // .number // ""' "$github_event_path" 2>/dev/null || echo "")
       local pr_title=$(jq --raw-output '.pull_request.title // .title // ""' "$github_event_path" 2>/dev/null || echo "")
-      pr_metadata=$(extract_pr_metadata "$pr_number" "$pr_title" "$jira_prefix" "$alternate_prefixes")
+      prefix_metadata=$(extract_pr_metadata "$pr_number" "$pr_title" "$jira_prefix" "$alternate_prefixes")
+      
+      # Extract PR number part from the metadata
+      if [ -n "$pr_number" ] && [ "$pr_number" != "null" ]; then
+        # Remove the PR number from prefix_metadata to avoid duplication
+        prefix_metadata=$(echo "$prefix_metadata" | sed "s/pr$pr_number-//")
+        pr_number_part="pr$pr_number"
+      fi
     fi
-
-    # Combine all metadata
-    [ -n "$pr_metadata" ] && meta="$pr_metadata$meta"
-    new_version="$new_version-$meta"
+    
+    # Add run number if available
+    if [ -n "$run_number" ]; then
+      run_number_part=".$run_number"
+    fi
+    
+    # Construct the final version string
+    local version_parts=""
+    
+    # Add prefix metadata (JIRA ticket or commit type) if available
+    if [ -n "$prefix_metadata" ]; then
+      # Remove trailing hyphen if present
+      prefix_metadata=$(echo "$prefix_metadata" | sed 's/-$//')
+      version_parts="$prefix_metadata"
+    fi
+    
+    # Add PR number if available
+    if [ -n "$pr_number_part" ]; then
+      if [ -n "$version_parts" ]; then
+        version_parts="$version_parts-$pr_number_part"
+      else
+        version_parts="$pr_number_part"
+      fi
+    fi
+    
+    # Add run number if available
+    if [ -n "$run_number_part" ]; then
+      version_parts="${version_parts}$run_number_part"
+    fi
+    
+    # Add commit hash
+    if [ -n "$short_sha" ]; then
+      version_parts="${version_parts}-$short_sha"
+    fi
+    
+    # Add the metadata to the version
+    if [ -n "$version_parts" ]; then
+      new_version="$new_version-$version_parts"
+    fi
   elif [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
     # For non-main branches without metadata flag
     new_version="$new_version-$branch-$short_sha"
