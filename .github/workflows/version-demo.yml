@@ -64,11 +64,12 @@ jobs:
           add-meta: ${{ github.ref != 'refs/heads/main' }}
 
       # Custom JIRA prefix
-      - name: Generate version with custom JIRA prefix
+      - name: Generate version with custom JIRA prefix and PR suffix
         id: custom-jira
         uses: ./.github/actions/version-generator
         with:
           jira-prefix: "ABC"
+          pr-suffix: "pre"
           add-meta: true
 
       # Display all generated versions

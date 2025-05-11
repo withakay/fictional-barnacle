@@ -159,63 +159,63 @@ run_tests() {
   export PR_TITLE="fix(auth): MK-456 Implement login"
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "Version with PR metadata" "1.0.1-mk-456-pr123-42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "Version with PR metadata" "1.0.1-mk456-pr123.42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 14: PR with JIRA ticket but no prefix
   export PR_TITLE="Implement MK456 login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "PR with JIRA ticket but no prefix" "1.0.1-mk-456-pr123-42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "PR with JIRA ticket but no prefix" "1.0.1-mk456-pr123.42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 15: PR with prefix but no JIRA ticket
   export PR_TITLE="fix: Implement login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "PR with prefix but no JIRA ticket" "1.0.1-fix-pr123-42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "PR with prefix but no JIRA ticket" "1.0.1-fix-pr123.42-1234567" "" "" "true" "MK" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 16: Custom JIRA prefix
   export PR_TITLE="FX-123: Implement new feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "Custom JIRA prefix" "1.0.1-fx-123-pr123-42-1234567" "" "" "true" "FX" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "Custom JIRA prefix" "1.0.1-fx123-pr123.42-1234567" "" "" "true" "FX" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 17: Custom alternate PR prefixes
   export PR_TITLE="build: Setup CI pipeline"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "Custom alternate PR prefixes" "1.0.1-build-pr123-42-1234567" "" "" "true" "MK" "fix,build,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "Custom alternate PR prefixes" "1.0.1-build-pr123.42-1234567" "" "" "true" "MK" "fix,build,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 18: JIRA prefix with space
   export PR_TITLE="Implement ABC 789 login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "JIRA prefix with space" "1.0.1-abc-789-pr123-42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "JIRA prefix with space" "1.0.1-abc789-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 19: JIRA prefix with space
   export PR_TITLE="Implement ABC 9XX login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "JIRA prefix with space (2)" "1.0.1-abc-9-pr123-42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "JIRA prefix with space (2)" "1.0.1-abc9-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 20: JIRA prefix with partial match is not used
   export PR_TITLE="Implement ABC XXX login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "JIRA prefix with partial match is not used" "1.0.1-pr123-42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "JIRA prefix with partial match is not used" "1.0.1-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test 21: JIRA prefix with partial match is not used
   export PR_TITLE="Implement ABC-X9 login feature"
   event_file=$(setup_pr_test)
   MOCK_LATEST_TAG_VALUE="1.0.0"
   MOCK_COMMITS_VALUE="fix(api): Fix login issue"
-  run_test "JIRA prefix with partial match is not used (2)" "1.0.1-pr123-42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
+  run_test "JIRA prefix with partial match is not used (2)" "1.0.1-pr123.42-1234567" "" "" "true" "ABC" "fix,hotfix,chore" "false" "1" "refs/heads/main" "1234567890abcdef1234567890abcdef12345678" "42" "$event_file"
 
   # Test summary
   echo ""

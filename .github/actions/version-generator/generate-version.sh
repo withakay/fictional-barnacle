@@ -64,8 +64,8 @@ extract_pr_metadata() {
     # Support prefixes with spaces (e.g., "MK 123" or "MK-123")
     local jira_ticket=$(echo "$pr_title" | grep -oE "($jira_prefix[- ][0-9]+|$jira_prefix[0-9]+)" | head -n 1)
     if [ -n "$jira_ticket" ]; then
-      # Normalize the JIRA ticket format to use a hyphen
-      [[ $jira_ticket != *-* ]] && jira_ticket=$(echo "$jira_ticket" | sed -E "s/($jira_prefix)[ ]?([0-9]+)/\1-\2/")
+      # Normalize the JIRA ticket format to remove hyphens and spaces
+      jira_ticket=$(echo "$jira_ticket" | sed -E "s/($jira_prefix)[- ]?([0-9]+)/\1\2/")
       # Convert to lowercase
       jira_ticket=$(echo "$jira_ticket" | tr '[:upper:]' '[:lower:]')
       metadata="$jira_ticket-$metadata"
@@ -178,21 +178,62 @@ generate_next_version() {
 
   # Add metadata if requested
   if [ "$add_meta" = "true" ]; then
-    local meta=""
-    [ -n "$run_number" ] && meta="$run_number-"
-    meta="${meta}$short_sha"
-
     # Extract PR info
-    local pr_metadata=""
+    local prefix_metadata=""
+    local pr_number_part=""
+    local run_number_part=""
+    
     if [ -n "$github_event_path" ] && [ -f "$github_event_path" ]; then
       local pr_number=$(jq --raw-output '.pull_request.number // .number // ""' "$github_event_path" 2>/dev/null || echo "")
       local pr_title=$(jq --raw-output '.pull_request.title // .title // ""' "$github_event_path" 2>/dev/null || echo "")
-      pr_metadata=$(extract_pr_metadata "$pr_number" "$pr_title" "$jira_prefix" "$alternate_prefixes")
+      prefix_metadata=$(extract_pr_metadata "$pr_number" "$pr_title" "$jira_prefix" "$alternate_prefixes")
+      
+      # Extract PR number part from the metadata
+      if [ -n "$pr_number" ] && [ "$pr_number" != "null" ]; then
+        # Remove the PR number from prefix_metadata to avoid duplication
+        prefix_metadata=$(echo "$prefix_metadata" | sed "s/pr$pr_number-//")
+        pr_number_part="pr$pr_number"
+      fi
     fi
-
-    # Combine all metadata
-    [ -n "$pr_metadata" ] && meta="$pr_metadata$meta"
-    new_version="$new_version-$meta"
+    
+    # Add run number if available
+    if [ -n "$run_number" ]; then
+      run_number_part=".$run_number"
+    fi
+    
+    # Construct the final version string
+    local version_parts=""
+    
+    # Add prefix metadata (JIRA ticket or commit type) if available
+    if [ -n "$prefix_metadata" ]; then
+      # Remove trailing hyphen if present
+      prefix_metadata=$(echo "$prefix_metadata" | sed 's/-$//')
+      version_parts="$prefix_metadata"
+    fi
+    
+    # Add PR number if available
+    if [ -n "$pr_number_part" ]; then
+      if [ -n "$version_parts" ]; then
+        version_parts="$version_parts-$pr_number_part"
+      else
+        version_parts="$pr_number_part"
+      fi
+    fi
+    
+    # Add run number if available
+    if [ -n "$run_number_part" ]; then
+      version_parts="${version_parts}$run_number_part"
+    fi
+    
+    # Add commit hash
+    if [ -n "$short_sha" ]; then
+      version_parts="${version_parts}-$short_sha"
+    fi
+    
+    # Add the metadata to the version
+    if [ -n "$version_parts" ]; then
+      new_version="$new_version-$version_parts"
+    fi
   elif [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
     # For non-main branches without metadata flag
     new_version="$new_version-$branch-$short_sha"
